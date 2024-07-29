@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تصنيف الصور الفوتوغرافية</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .app-title {
+            text-align: center;
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: moveRight 15s linear infinite;
+        }
+        @keyframes moveRight {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .album-buttons, .action-buttons {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 1px solid #ccc;
+            display: inline-block;
+            padding: 6px 12px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            color: #333;
+            border-radius: 4px;
+        }
+        #imagePreview {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .image-container {
+            margin: 10px;
+            text-align: center;
+        }
+        #imagePreview img, #imagePreview video {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .comment {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .share-buttons {
+            margin-top: 5px;
+        }
+        .share-buttons button {
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="app-title">تصنيف الصور الفوتوغرافية</h1>
+
+        <input type="text" id="searchInput" placeholder="ابحث عن صورة...">
+
+        <div class="album-buttons" id="albumButtons">
+            <!-- الألبومات ستضاف هنا بواسطة JavaScript -->
+        </div>
+
+        <div class="action-buttons">
+            <button onclick="addAlbum()">إضافة ألبوم</button>
+            <button onclick="deleteAlbum()">حذف ألبوم</button>
+            <button onclick="editAlbumName()">تعديل اسم ألبوم</button>
+        </div>
+
+        <label for="fileInput" class="custom-file-upload">
+            اختر صورة أو فيديو
+        </label>
+        <input type="file" id="fileInput" accept="image/*,video/*" onchange="previewFile()">
+
+        <select id="albumSelect">
+            <!-- خيارات الألبوم ستضاف هنا بواسطة JavaScript -->
+        </select>
+
+        <button onclick="addToAlbum()">إضافة للألبوم</button>
+        <button onclick="deleteFromAlbum()">حذف من الألبوم</button>
+        <button onclick="saveData()">حفظ البيانات</button>
+        <button onclick="saveToHardDisk()">حفظ في الهارد دسك</button>
+        <button onclick="autoClassify()">تصنيف تلقائي</button>
+
+        <div id="imagePreview"></div>
+    </div>
+
+    <script>
+        let albums = {
+            'العائلة': [],
+            'العمارة': [],
+            'الشارع': [],
+            'المناظر الطبيعية': [],
+            'السفر': [],
+            'متنوع': []
+        };
+        let currentAlbum = '';
+
+        function updateAlbumButtons() {
+            const albumButtons = document.getElementById('albumButtons');
+            albumButtons.innerHTML = '';
+            for (let album in albums) {
+                const button = document.createElement('button');
+                button.textContent = album;
+                button.onclick = () => showAlbum(album);
+                albumButtons.appendChild(button);
+            }
+
+            const albumSelect = document.getElementById('albumSelect');
+            albumSelect.innerHTML = '';
+            for (let album in albums) {
+                const option = document.createElement('option');
+                option.value = album;
+                option.textContent = album;
+                albumSelect.appendChild(option);
+            }
+        }
+
+        function showAlbum(album) {
+            currentAlbum = album;
+            const imagePreview = document.getElementById('imagePreview');
+            imagePreview.innerHTML = '';
+            albums[album].forEach((file, index) => {
+                const container = document.createElement('div');
+                container.className = 'image-container';
+
+                if (file.type.startsWith('image')) {
+                    const img = document.createElement('img');
+                    img.src = file.data;
+                    container.appendChild(img);
+                } else if (file.type.startsWith('video')) {
+                    const video = document.createElement('video');
+                    video.src = file.data;
+                    video.controls = true;
+                    container.appendChild(video);
+                }
+
+                const comment = document.createElement('div');
+                comment.className = 'comment';
+                comment.textContent = file.comment || '';
+                comment.contentEditable = true;
+                comment.oninput = () => {
+                    file.comment = comment.textContent;
+                };
+                container.appendChild(comment);
+
+                const shareButtons = document.createElement('div');
+                shareButtons.className = 'share-buttons';
+                ['فيسبوك', 'تويتر', 'انستغرام'].forEach(platform => {
+                    const shareButton = document.createElement('button');
+                    shareButton.textContent = `مشاركة على ${platform}`;
+                    shareButton.onclick = () => shareImage(file, platform);
+                    shareButtons.appendChild(shareButton);
+                });
+                container.appendChild(shareButtons);
+
+                imagePreview.appendChild(container);
+            });
+        }
+
+        function previewFile() {
+            const preview = document.getElementById('imagePreview');
+            const file = document.getElementById('fileInput').files[0];
+            const reader = new FileReader();
+
+            reader.onloadend = function() {
+                preview.innerHTML = '';
+                const container = document.createElement('div');
+                container.className = 'image-container';
+
+                if (file.type.startsWith('image')) {
+                    const img = document.createElement('img');
+                    img.src = reader.result;
+                    container.appendChild(img);
+                } else if (file.type.startsWith('video')) {
+                    const video = document.createElement('video');
+                    video.src = reader.result;
+                    video.controls = true;
+                    container.appendChild(video);
+                }
+
+                preview.appendChild(container);
+            }
+
+            if (file) {
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        }
+
+        function addToAlbum() {
+            const file = document.getElementById('fileInput').files[0];
+            const album = document.getElementById('albumSelect').value;
+            if (file && album) {
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    albums[album].push({type: file.type, data: reader.result, comment: ''});
+                    showAlbum(album);
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function deleteFromAlbum() {
+            const album = document.getElementById('albumSelect').value;
+            if (currentAlbum === album && albums[album].length > 0) {
+                albums[album].pop();
+                showAlbum(album);
+            }
+        }
+
+        function addAlbum() {
+            const albumName = prompt('أدخل اسم الألبوم الجديد:');
+            if (albumName && !(albumName in albums)) {
+                albums[albumName] = [];
+                updateAlbumButtons();
+            }
+        }
+
+        function deleteAlbum() {
+            const albumName = prompt('أدخل اسم الألبوم المراد حذفه:');
+            if (albumName in albums) {
+                delete albums[albumName];
+                updateAlbumButtons();
+                document.getElementById('imagePreview').innerHTML = '';
+            }
+        }
+
+        function editAlbumName() {
+            const oldName = prompt('أدخل اسم الألبوم المراد تعديله:');
+            if (oldName in albums) {
+                const newName = prompt('أدخل الاسم الجديد للألبوم:');
+                if (newName && !(newName in albums)) {
+                    albums[newName] = albums[oldName];
+                    delete albums[oldName];
+                    updateAlbumButtons();
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('photoAlbums', JSON.stringify(albums));
+            alert('تم حفظ البيانات بنجاح!');
+        }
+
+        function saveToHardDisk() {
+            const data = JSON.stringify(albums);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'photo_albums.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function shareImage(file, platform) {
+            // هنا يمكنك إضافة منطق المشاركة الفعلي. هذا مجرد محاكاة.
+            alert(`تمت مشاركة الصورة على ${platform}`);
+        }
+
+        function autoClassify() {
+            const file = document.getElementById('fileInput').files[0];
+            if (file) {
+                // هذه محاكاة بسيطة للتصنيف التلقائي. في الواقع، هذا يتطلب خوارزميات معقدة.
+                const randomAlbum = Object.keys(albums)[Math.floor(Math.random() * Object.keys(albums).length)];
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    albums[randomAlbum].push({type: file.type, data: reader.result, comment: ''});
+                    alert(`تم تصنيف الصورة تلقائيًا في ألبوم "${randomAlbum}"`);
+                    showAlbum(randomAlbum);
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            for (let album in albums) {
+                const matchingImages = albums[album].filter(file =>
+                    file.comment.toLowerCase().includes(searchTerm)
+                );
+                if (matchingImages.length > 0) {
+                    showSearchResults(matchingImages, album);
+                    return;
+                }
+            }
+            document.getElementById('imagePreview').innerHTML = 'لا توجد نتائج للبحث';
+        });
+
+        function showSearchResults(images, album) {
+            const imagePreview = document.getElementById('imagePreview');
+            imagePreview.innerHTML = `<h3>نتائج البحث في ألبوم "${album}":</h3>`;
+            images.forEach(file => {
+                const container = document.createElement('div');
+                container.className = 'image-container';
+
+                if (file.type.startsWith('image')) {
+                    const img = document.createElement('img');
+                    img.src = file.data;
+                    container.appendChild(img);
+                } else if (file.type.startsWith('video')) {
+                    const video = document.createElement('video');
+                    video.src = file.data;
+                    video.controls = true;
+                    container.appendChild(video);
+                }
+
+                const comment = document.createElement('div');
+                comment.className = 'comment';
+                comment.textContent = file.comment || '';
+                container.appendChild(comment);
+
+                imagePreview.appendChild(container);
+            });
+        }
+
+        // تحميل البيانات المحفوظة عند بدء التطبيق
+        const savedData = localStorage.getItem('photoAlbums');
+        if (savedData) {
+            albums = JSON.parse(savedData);
+        }
+
+        updateAlbumButtons();
+    </script>
+</body>
+</html>
